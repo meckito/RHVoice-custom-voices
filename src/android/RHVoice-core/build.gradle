@@ -5,7 +5,6 @@ ext.minor_version = 18
 ext.revision_number = 4
 ext.baseVersionCode = 100000 * major_version + 1000 * minor_version + 10 * revision_number
 
-ext.base_pkg_dir_url = 'https://rhvoice.org/download/packages-%s.json'
 
 task BoostIncludes(type: Exec) {
     workingDir '../../..'
@@ -86,14 +85,12 @@ android {
             dimension 'dir'
             versionCode = baseVersionCode + 5
             versionNameSuffix '-alpha'
-            ext.pkgDirUrl = sprintf(base_pkg_dir_url, "latest")
         }
 
         dev {
             dimension 'dir'
             versionCode = baseVersionCode + 9
             versionNameSuffix '-dev'
-            ext.pkgDirUrl = findProperty('RHVoice.devPkgDirUrl') ?: sprintf(base_pkg_dir_url, "dev")
         }
     }
 }
@@ -127,19 +124,30 @@ dependencies {
 
 preBuild.dependsOn BoostIncludes
 
-afterEvaluate {
-    def header = file("src/main/jni/generated/pkg_config.h")
-    android.applicationVariants.each { variant ->
-        def flavor = variant.productFlavors[0]
-        if (!flavor.ext.has('pkgDirUrl')) return
-        def url = flavor.ext.pkgDirUrl
-        def genTask = tasks.register("generatePkgConfig${variant.name.capitalize()}") {
-            outputs.file(header)
-            doLast {
-                header.parentFile.mkdirs()
-                header.text = "#pragma once\n#define PKG_DIR_URL \"${url}\"\n"
-            }
-        }
-        tasks.named("pre${variant.name.capitalize()}Build") { dependsOn genTask }
+// Generowanie src/main/jni/generated/pkg_config.h z adresem katalogu paczek.
+//
+// DLACZEGO NIE PER WARIANT (bylo tak w upstreamie i bylo bledne):
+// kod natywny buduje sie raz na TYP buildu, nie na wariant - zadania nazywaja sie
+// buildNdkBuildDebug[abi] bez nazwy wariantu. Dlatego build stable ciagnie tez
+// preDevDebugBuild, oba zadania generujace pisza do TEGO SAMEGO pliku i wygrywa to,
+// ktore zapisalo pozniej (w praktyce dev). Efekt: APK stable mial wkompilowany adres
+// katalogu DEV - potwierdzone stringami w libRHVoice_jni.so.
+// Adres zalezny od wariantu jest w tej konstrukcji nieosiagalny, wiec jest JEDEN adres.
+//
+// Plik MUSI istniec: package_client.cpp robi #include "pkg_config.h" bezwarunkowo pod ANDROID.
+// Nadpisanie: ./gradlew ... -PRHVoice.pkgDirUrl=<url>
+ext.defaultPkgDirUrl = 'https://github.com/RHVoice/packages/releases/download/1.18/packages-1.18.json'
+
+def pkgConfigHeader = file("src/main/jni/generated/pkg_config.h")
+def pkgDirUrl = findProperty('RHVoice.pkgDirUrl') ?: ext.defaultPkgDirUrl
+
+def generatePkgConfig = tasks.register('generatePkgConfig') {
+    outputs.file(pkgConfigHeader)
+    inputs.property('url', pkgDirUrl)
+    doLast {
+        pkgConfigHeader.parentFile.mkdirs()
+        pkgConfigHeader.text = "#pragma once\n#define PKG_DIR_URL \"${pkgDirUrl}\"\n"
     }
 }
+
+preBuild.dependsOn generatePkgConfig

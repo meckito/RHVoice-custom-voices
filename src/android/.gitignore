@@ -7,3 +7,4 @@ build/
 binary_cache/
 perf.data
 *.iml
+RHVoice-core/src/main/jni/generated/
