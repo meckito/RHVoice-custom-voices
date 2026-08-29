@@ -128,6 +128,16 @@ dependencies {
 
 preBuild.dependsOn BoostIncludes
 
+// Test integracyjny na PRAWDZIWYM pliku dodatku NVDA jest pomijany, dopoki nie
+// wskaze sie sciezki: -Dkazek.addon=... (property trzeba jawnie przekazac do JVM
+// testowej, Gradle nie robi tego sam) albo rownowaznie -Pkazek.addon=...
+tasks.withType(Test).configureEach {
+    def addonPath = System.getProperty('kazek.addon') ?: project.findProperty('kazek.addon')
+    if (addonPath) {
+        systemProperty 'kazek.addon', addonPath
+    }
+}
+
 // Generowanie src/main/jni/generated/pkg_config.h z adresem katalogu paczek.
 //
 // DLACZEGO NIE PER WARIANT (bylo tak w upstreamie i bylo bledne):
