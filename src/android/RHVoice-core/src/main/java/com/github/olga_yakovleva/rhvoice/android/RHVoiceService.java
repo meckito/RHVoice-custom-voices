@@ -742,8 +742,11 @@ public final class RHVoiceService extends TextToSpeechService implements Lifecyc
                 continue;
             }
             final Locale loc = new Locale(lp.getOldCode());
-            result.add(new Voice(pack.getName(), loc, Voice.QUALITY_NORMAL,
-                    Voice.LATENCY_NORMAL, false, ImmutableSet.of()));
+            Voice voice = new Voice(pack.getName(), loc, Voice.QUALITY_NORMAL,
+                    Voice.LATENCY_NORMAL, false, ImmutableSet.of());
+            if (BuildConfig.DEBUG)
+                Log.v(TAG, "Local voice: " + voice.toString());
+            result.add(voice);
         }
         return result;
     }

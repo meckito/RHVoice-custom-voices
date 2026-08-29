@@ -132,6 +132,17 @@ public final class LocalVoicesFragment extends ToolbarFragment
         LocalVoiceImportWorker.enqueue(requireContext(), uri);
     }
 
+    /**
+     * Import pliku otwartego POZA aplikacja (menedzer plikow, udostepnianie).
+     * Wywoluje to {@link LocalVoicesActivity} po odebraniu intencji.
+     *
+     * Gdy widok jeszcze nie istnieje, import i tak sie zaczyna - komunikat
+     * pojawi sie po odebraniu wyniku z workera.
+     */
+    public void importFile(Uri uri) {
+        onFileChosen(uri);
+    }
+
     /** Pokazuje komunikat i pozwala czytnikowi ekranu go oglosic. */
     private void announce(String message) {
         if (status == null)

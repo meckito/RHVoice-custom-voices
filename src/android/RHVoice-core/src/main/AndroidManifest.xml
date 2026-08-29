@@ -45,13 +45,51 @@
         android:label="@string/settings"
         android:exported="true">
     </activity>
-    <!-- Ekran glosow wlasnych (funkcja forka). Nie eksportowany: uruchamia go
-         wylacznie nasza apka z pozycji menu, wiec nie ma powodu wystawiac go
-         innym aplikacjom. -->
+    <!-- Ekran glosow wlasnych (funkcja forka).
+         exported=true JEST TU KONIECZNE: bez tego system nie moze pokazac naszej
+         apki na liscie "Otworz za pomoca" dla paczki glosu. Ekran nie robi nic
+         niebezpiecznego bez potwierdzenia - pokazuje liste glosow i importuje
+         DOKLADNIE ten plik, ktory uzytkownik sam wskazal w menedzerze plikow. -->
     <activity
         android:name=".LocalVoicesActivity"
         android:label="@string/local_voices"
-        android:exported="false">
+        android:exported="true">
+      <!-- Paczki rozpoznane po TYPIE tresci. Dodatek NVDA i paczka androidowa
+           to archiwa ZIP, wiec menedzery plikow podaja najczesciej jeden z tych
+           typow (nvda-addon nie ma wlasnego zarejestrowanego typu MIME). -->
+      <intent-filter android:label="@string/local_voice_install">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="content"/>
+        <data android:scheme="file"/>
+        <data android:mimeType="application/zip"/>
+        <data android:mimeType="application/x-zip-compressed"/>
+        <data android:mimeType="application/octet-stream"/>
+      </intent-filter>
+      <!-- Paczki rozpoznane po ROZSZERZENIU nazwy - dla menedzerow, ktore podaja
+           typ ogolny albo zaden. mimeType="*&#47;*" jest tu zawezone wzorcem
+           sciezki, wiec apka NIE zglasza sie do wszystkich plikow. -->
+      <intent-filter android:label="@string/local_voice_install">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="content"/>
+        <data android:scheme="file"/>
+        <data android:mimeType="*/*"/>
+        <data android:host="*"/>
+        <data android:pathPattern=".*\\.nvda-addon"/>
+        <data android:pathPattern=".*\\..*\\.nvda-addon"/>
+        <data android:pathPattern=".*\\..*\\..*\\.nvda-addon"/>
+      </intent-filter>
+      <!-- Udostepnienie pliku przez "Wyslij do" / "Udostepnij". -->
+      <intent-filter android:label="@string/local_voice_install">
+        <action android:name="android.intent.action.SEND"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:mimeType="application/zip"/>
+        <data android:mimeType="application/x-zip-compressed"/>
+        <data android:mimeType="application/octet-stream"/>
+      </intent-filter>
     </activity>
     <receiver
         android:name=".OnMyPackageReceiver"

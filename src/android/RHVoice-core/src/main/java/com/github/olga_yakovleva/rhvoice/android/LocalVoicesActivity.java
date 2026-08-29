@@ -17,6 +17,7 @@ package com.github.olga_yakovleva.rhvoice.android;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -29,8 +30,17 @@ import androidx.appcompat.app.AppCompatActivity;
  * fragmentem wstrzykiwanym w cudza aktywnosc: pozycja menu jest wspolna dla
  * wszystkich ekranow z belka, a nie kazda taka aktywnosc ma kontener i cykl
  * zycia, ktorych potrzebuje ten fragment.
+ *
+ * Ten ekran jest tez punktem wejscia dla "Otworz za pomoca": gdy uzytkownik
+ * otworzy paczke glosu w menedzerze plikow, system moze uruchomic wlasnie tu
+ * (filtry intencji w manifescie).
  */
 public final class LocalVoicesActivity extends AppCompatActivity {
+
+    /** Zapamietuje, ze plik z intencji zostal juz przekazany do importu. */
+    private static final String STATE_INTENT_HANDLED = "intent_handled";
+
+    private boolean intentHandled;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -42,7 +52,54 @@ public final class LocalVoicesActivity extends AppCompatActivity {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.frame, new LocalVoicesFragment(), "local_voices")
                     .commit();
+        } else {
+            intentHandled = state.getBoolean(STATE_INTENT_HANDLED, false);
         }
+        handleIncomingFile(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // Nowa intencja to nowy plik - poprzednie oznaczenie przestaje obowiazywac.
+        intentHandled = false;
+        handleIncomingFile(intent);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        // Bez tego obrot ekranu zaimportowalby ten sam plik po raz drugi.
+        out.putBoolean(STATE_INTENT_HANDLED, intentHandled);
+    }
+
+    /**
+     * Jesli aktywnosc dostala plik z zewnatrz (menedzer plikow, udostepnianie),
+     * zleca jego import.
+     */
+    private void handleIncomingFile(Intent intent) {
+        if (intentHandled || intent == null)
+            return;
+        Uri uri = extractUri(intent);
+        if (uri == null)
+            return;
+        intentHandled = true;
+        LocalVoicesFragment fragment = (LocalVoicesFragment)
+                getSupportFragmentManager().findFragmentByTag("local_voices");
+        if (fragment != null)
+            fragment.importFile(uri);
+        else
+            LocalVoiceImportWorker.enqueue(this, uri);
+    }
+
+    private static Uri extractUri(Intent intent) {
+        String action = intent.getAction();
+        if (Intent.ACTION_VIEW.equals(action))
+            return intent.getData();
+        if (Intent.ACTION_SEND.equals(action))
+            return intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        return null;
     }
 
     public static void show(Context context) {
