@@ -22,6 +22,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -41,6 +42,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.common.collect.FluentIterable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,11 +56,30 @@ public final class SettingsListFragment extends PreferenceFragmentCompat impleme
     private final ActivityResultLauncher<String[]> openConfigFile = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT ? registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::onConfigFileSelected) : null;
 
 
+    /**
+     * Nazwy WLACZONYCH glosow zaimportowanych z pliku, ktore naleza do tego jezyka.
+     *
+     * Dopasowanie idzie po nazwie jezyka z voice.info (np. "Polish") - tak samo jak
+     * w RHVoiceService, wiec glos widoczny w systemie jest tym samym glosem, ktory
+     * pojawia sie tutaj.
+     */
+    private List<String> getLocalVoiceNames(LanguagePack lp) {
+        List<String> names = new ArrayList<>();
+        try {
+            for (LocalVoicePack pack : ContextLocalVoiceDirs.newStore(requireContext()).list()) {
+                if (pack.isEnabled() && pack.getLanguage().equals(lp.getName()))
+                    names.add(pack.getName());
+            }
+        } catch (java.io.IOException e) {
+            Log.e(TAG, "Cannot read the local voice registry", e);
+        }
+        return names;
+    }
+
     private void buildLanguagePreferenceCategory(PreferenceCategory cat0, LanguagePack lp, List<VoicePack> voices) {
         Context ctx = getPreferenceManager().getContext();
         PreferenceScreen cat = getPreferenceManager().createPreferenceScreen(ctx);
         cat.setPersistent(false);
-        String firstVoiceName = voices.get(0).getName();
         String code3 = lp.getCode();
         cat.setKey("language." + code3);
         cat.setTitle(lp.getDisplayName());
@@ -68,14 +89,23 @@ public final class SettingsListFragment extends PreferenceFragmentCompat impleme
         voicePref.setTitle(R.string.default_voice_title);
         voicePref.setSummary("%s");
         voicePref.setDialogTitle(R.string.default_voice_dialog_title);
-        int voiceCount = voices.size();
-        String[] voiceNames = new String[voiceCount];
-        for (int i = 0; i < voiceCount; ++i) {
-            voiceNames[i] = voices.get(i).getName();
+        // Lista glosow tego jezyka: pobrane z katalogu ORAZ zaimportowane z pliku.
+        // Bez glosow wlasnych uzytkownik widzialby je tylko na ekranie "Glosy wlasne"
+        // i nie mialby jak wybrac ich jako glosu jezyka - zgloszone jako blad.
+        List<String> voiceNameList = new ArrayList<>();
+        for (VoicePack voice : voices)
+            voiceNameList.add(voice.getName());
+        for (String localName : getLocalVoiceNames(lp)) {
+            if (!voiceNameList.contains(localName))
+                voiceNameList.add(localName);
         }
+        String[] voiceNames = voiceNameList.toArray(new String[0]);
         voicePref.setEntries(voiceNames);
         voicePref.setEntryValues(voiceNames);
-        voicePref.setDefaultValue(firstVoiceName);
+        // Domyslny glos to pierwszy na liscie; gdy jezyk ma TYLKO glos wlasny,
+        // pobranych glosow nie ma i nie wolno siegac po voices.get(0).
+        if (voiceNames.length > 0)
+            voicePref.setDefaultValue(voiceNames[0]);
         cat.addPreference(voicePref);
         CheckBoxPreference detectPref = new CheckBoxPreference(ctx);
         detectPref.setKey("language." + code3 + ".detect");
@@ -135,7 +165,11 @@ public final class SettingsListFragment extends PreferenceFragmentCompat impleme
         final DataManager dm = Repository.get().createDataManager();
         for (LanguagePack lp : dm.iterLanguages()) {
             final List<VoicePack> voices = lp.iterVoices().filter(v -> v.getEnabled(requireContext()) && v.isInstalled(requireContext())).toList();
-            if (voices.isEmpty())
+            // Jezyk pokazujemy takze wtedy, gdy NIE MA pobranych glosow, ale sa
+            // glosy zaimportowane z pliku - inaczej glos wlasny nie mialby gdzie
+            // sie pojawic i nie dalby sie wybrac.
+            final List<String> localNames = getLocalVoiceNames(lp);
+            if (voices.isEmpty() && localNames.isEmpty())
                 continue;
             if (cat == null) {
                 cat = new PreferenceCategory(getPreferenceManager().getContext());
