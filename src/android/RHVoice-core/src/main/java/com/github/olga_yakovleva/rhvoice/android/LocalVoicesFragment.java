@@ -133,14 +133,17 @@ public final class LocalVoicesFragment extends ToolbarFragment
     }
 
     /**
-     * Import pliku otwartego POZA aplikacja (menedzer plikow, udostepnianie).
-     * Wywoluje to {@link LocalVoicesActivity} po odebraniu intencji.
-     *
-     * Gdy widok jeszcze nie istnieje, import i tak sie zaczyna - komunikat
-     * pojawi sie po odebraniu wyniku z workera.
+     * Import GOTOWEJ kopii paczki, ktora aktywnosc zrobila z pliku wskazanego
+     * poza aplikacja (menedzer plikow, udostepnianie).
      */
-    public void importFile(Uri uri) {
-        onFileChosen(uri);
+    public void importLocalCopy(java.io.File file) {
+        announce(getString(R.string.local_voice_installing));
+        LocalVoiceImportWorker.enqueueFile(requireContext(), file);
+    }
+
+    /** Pokazuje blad, ktory wystapil jeszcze przed zleceniem importu. */
+    public void showImportError(String message) {
+        announce(message);
     }
 
     /** Pokazuje komunikat i pozwala czytnikowi ekranu go oglosic. */

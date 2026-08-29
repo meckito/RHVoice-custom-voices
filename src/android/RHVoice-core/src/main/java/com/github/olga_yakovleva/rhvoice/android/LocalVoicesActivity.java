@@ -19,9 +19,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * Ekran glosow wlasnych.
@@ -36,6 +44,8 @@ import androidx.appcompat.app.AppCompatActivity;
  * (filtry intencji w manifescie).
  */
 public final class LocalVoicesActivity extends AppCompatActivity {
+
+    private static final String TAG = "RHVoice.LocalVoices";
 
     /** Zapamietuje, ze plik z intencji zostal juz przekazany do importu. */
     private static final String STATE_INTENT_HANDLED = "intent_handled";
@@ -52,6 +62,10 @@ public final class LocalVoicesActivity extends AppCompatActivity {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.frame, new LocalVoicesFragment(), "local_voices")
                     .commit();
+            // Transakcja jest asynchroniczna, a plik z intencji obslugujemy PO
+            // niej - inaczej findFragmentByTag zwraca null i komunikat o wyniku
+            // nie ma gdzie sie pojawic.
+            getSupportFragmentManager().executePendingTransactions();
         } else {
             intentHandled = state.getBoolean(STATE_INTENT_HANDLED, false);
         }
@@ -77,6 +91,12 @@ public final class LocalVoicesActivity extends AppCompatActivity {
     /**
      * Jesli aktywnosc dostala plik z zewnatrz (menedzer plikow, udostepnianie),
      * zleca jego import.
+     *
+     * KRYTYCZNE: uprawnienie do adresu z intencji przysluguje TEJ AKTYWNOSCI i
+     * wygasa, gdy zniknie. Worker w tle dostawal wtedy SecurityException
+     * ("requires that you obtain access using ACTION_OPEN_DOCUMENT") - zmierzone
+     * na urzadzeniu. Dlatego kopiujemy plik TERAZ, dopoki mamy do niego dostep,
+     * i workerowi podajemy juz gotowa kopie.
      */
     private void handleIncomingFile(Intent intent) {
         if (intentHandled || intent == null)
@@ -85,12 +105,49 @@ public final class LocalVoicesActivity extends AppCompatActivity {
         if (uri == null)
             return;
         intentHandled = true;
+
         LocalVoicesFragment fragment = (LocalVoicesFragment)
                 getSupportFragmentManager().findFragmentByTag("local_voices");
+        File copy;
+        try {
+            copy = copyToCache(uri);
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot read the file handed to us", e);
+            String message = getString(R.string.local_voice_error_failed,
+                    String.valueOf(e.getMessage()));
+            if (fragment != null)
+                fragment.showImportError(message);
+            return;
+        }
         if (fragment != null)
-            fragment.importFile(uri);
+            fragment.importLocalCopy(copy);
         else
-            LocalVoiceImportWorker.enqueue(this, uri);
+            LocalVoiceImportWorker.enqueueFile(this, copy);
+    }
+
+    /** Kopiuje wskazany plik do wlasnej pamieci podrecznej aplikacji. */
+    private File copyToCache(Uri uri) throws IOException {
+        File target = new File(getCacheDir(), "incoming-voice-package.zip");
+        InputStream in = getContentResolver().openInputStream(uri);
+        if (in == null)
+            throw new IOException("cannot open the selected file");
+        try {
+            OutputStream out = new BufferedOutputStream(new FileOutputStream(target));
+            try {
+                byte[] buf = new byte[8192];
+                int read;
+                while ((read = in.read(buf)) != -1) {
+                    if (read > 0)
+                        out.write(buf, 0, read);
+                }
+                out.flush();
+            } finally {
+                out.close();
+            }
+        } finally {
+            in.close();
+        }
+        return target;
     }
 
     private static Uri extractUri(Intent intent) {
