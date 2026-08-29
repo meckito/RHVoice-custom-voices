@@ -32,4 +32,18 @@
   <string name="add">Dodaj</string>
   <string name="remove">Usuń</string>
   <string name="config_file">Plik konfiguracyjny</string>
+  <!-- Glosy wlasne, instalowane z pliku (funkcja forka) -->
+  <string name="local_voices">Głosy własne</string>
+  <string name="local_voice_install">Zainstaluj głos z pliku</string>
+  <string name="local_voice_installing">Instalowanie głosu, proszę czekać</string>
+  <string name="local_voice_installed">Głos %1$s został zainstalowany</string>
+  <string name="local_voice_removed">Głos %1$s został usunięty</string>
+  <string name="local_voice_enabled">Głos %1$s został włączony</string>
+  <string name="local_voice_disabled">Głos %1$s został wyłączony</string>
+  <string name="local_voice_error_not_a_package">Ten plik nie jest paczką głosu RHVoice</string>
+  <string name="local_voice_error_missing_language">Najpierw zainstaluj język %1$s, potem zaimportuj ten głos</string>
+  <string name="local_voice_error_failed">Nie udało się zainstalować głosu: %1$s</string>
+  <string name="local_voice_none">Nie zainstalowałeś jeszcze żadnego głosu z pliku</string>
+  <string name="local_voice_remove_question">Czy na pewno chcesz usunąć głos %1$s?</string>
+  <string name="local_voice_language">Język: %1$s</string>
 </resources>

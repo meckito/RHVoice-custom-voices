@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ekran glosow wlasnych: przycisk importu, komunikat statusu i lista.
+     Dostepnosc: status jest TRWALYM tekstem na ekranie (nie Toastem), zeby
+     czytnik ekranu mogl do niego wrocic, a assertive live region powoduje
+     ogloszenie zmiany od razu. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+  <com.google.android.material.button.MaterialButton
+      android:id="@+id/local_voice_import"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_margin="16dp"
+      android:focusable="true"
+      android:text="@string/local_voice_install"/>
+
+  <TextView
+      android:id="@+id/local_voice_status"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="16dp"
+      android:layout_marginEnd="16dp"
+      android:layout_marginBottom="8dp"
+      android:focusable="true"
+      android:accessibilityLiveRegion="assertive"
+      android:visibility="gone"/>
+
+  <androidx.recyclerview.widget.RecyclerView
+      android:id="@+id/list"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:clipToPadding="false"
+      android:scrollbars="vertical"/>
+
+</LinearLayout>

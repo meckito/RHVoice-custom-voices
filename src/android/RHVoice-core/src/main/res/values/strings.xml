@@ -31,4 +31,18 @@
   <string name="add">Add</string>
   <string name="remove">Remove</string>
   <string name="config_file">Configuration file</string>
+  <!-- Local voices imported from a file (fork feature) -->
+  <string name="local_voices">Own voices</string>
+  <string name="local_voice_install">Install a voice from a file</string>
+  <string name="local_voice_installing">Installing the voice, please wait</string>
+  <string name="local_voice_installed">Voice %1$s has been installed</string>
+  <string name="local_voice_removed">Voice %1$s has been removed</string>
+  <string name="local_voice_enabled">Voice %1$s has been switched on</string>
+  <string name="local_voice_disabled">Voice %1$s has been switched off</string>
+  <string name="local_voice_error_not_a_package">This file is not a RHVoice voice package</string>
+  <string name="local_voice_error_missing_language">Install the %1$s language first, then import this voice</string>
+  <string name="local_voice_error_failed">The voice could not be installed: %1$s</string>
+  <string name="local_voice_none">You have not installed any voice from a file yet</string>
+  <string name="local_voice_remove_question">Are you sure you want to remove the voice %1$s?</string>
+  <string name="local_voice_language">Language: %1$s</string>
 </resources>

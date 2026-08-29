@@ -32,6 +32,13 @@ public abstract class ToolbarFragment extends Fragment {
                 SettingsActivity.show(requireContext());
                 return true;
             }
+            // Ekran glosow wlasnych jest osiagalny z KAZDEGO ekranu z ta belka,
+            // bo pozycja menu jest wspolna (R.menu.main). Osobna aktywnosc, bo
+            // nie kazda aktywnosc z ta belka ma kontener dla tego fragmentu.
+            if (item.getItemId() == R.id.local_voices) {
+                LocalVoicesActivity.show(requireContext());
+                return true;
+            }
             return false;
         });
         InsetUtil.setInsets(toolbar, (left, top, right, bottom) -> toolbar.setPadding(left, 0, right, 0));

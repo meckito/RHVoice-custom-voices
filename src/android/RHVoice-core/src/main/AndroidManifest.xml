@@ -45,6 +45,14 @@
         android:label="@string/settings"
         android:exported="true">
     </activity>
+    <!-- Ekran glosow wlasnych (funkcja forka). Nie eksportowany: uruchamia go
+         wylacznie nasza apka z pozycji menu, wiec nie ma powodu wystawiac go
+         innym aplikacjom. -->
+    <activity
+        android:name=".LocalVoicesActivity"
+        android:label="@string/local_voices"
+        android:exported="false">
+    </activity>
     <receiver
         android:name=".OnMyPackageReceiver"
         android:exported="true">
