@@ -48,6 +48,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -708,7 +709,57 @@ public final class RHVoiceService extends TextToSpeechService implements Lifecyc
                 result.add(v);
             }
         }
+        result.addAll(getLocalVoices(dm));
         return result;
+    }
+
+    /**
+     * Glosy zainstalowane przez uzytkownika z pliku, wystawione systemowi obok
+     * glosow pobranych z katalogu.
+     *
+     * Locale bierzemy z jezyka o nazwie zapisanej w voice.info. Gdy takiego
+     * jezyka NIE MA w katalogu, glos jest POMIJANY (a nie wystawiany z bledna
+     * lokalizacja) - inaczej system pokazalby uzytkownikowi glos, ktorego silnik
+     * nie potrafi zsyntezowac, bo brakuje mu danych jezykowych.
+     */
+    private List<Voice> getLocalVoices(DataManager dm) {
+        List<Voice> result = new ArrayList<Voice>();
+        List<LocalVoicePack> packs;
+        try {
+            packs = ContextLocalVoiceDirs.newStore(this).list();
+        } catch (IOException e) {
+            if (BuildConfig.DEBUG)
+                Log.e(TAG, "Cannot read the local voice registry", e);
+            return result;
+        }
+        for (LocalVoicePack pack : packs) {
+            if (!pack.isEnabled())
+                continue;
+            final LanguagePack lp = dm.getLanguageByName(pack.getLanguage());
+            if (lp == null) {
+                Log.w(TAG, "Skipping local voice " + pack.getId()
+                        + ": no language named " + pack.getLanguage());
+                continue;
+            }
+            final Locale loc = new Locale(lp.getOldCode());
+            result.add(new Voice(pack.getName(), loc, Voice.QUALITY_NORMAL,
+                    Voice.LATENCY_NORMAL, false, ImmutableSet.of()));
+        }
+        return result;
+    }
+
+    /** Czy nazwa nalezy do wlaczonego glosu lokalnego. */
+    private boolean isLocalVoiceName(String name) {
+        try {
+            for (LocalVoicePack pack : ContextLocalVoiceDirs.newStore(this).list()) {
+                if (pack.isEnabled() && pack.getName().equals(name))
+                    return true;
+            }
+        } catch (IOException e) {
+            if (BuildConfig.DEBUG)
+                Log.e(TAG, "Cannot read the local voice registry", e);
+        }
+        return false;
     }
 
     @Override
@@ -724,6 +775,8 @@ public final class RHVoiceService extends TextToSpeechService implements Lifecyc
                 continue;
             return (v.getEnabled(this) && v.isInstalled(this)) ? TextToSpeech.SUCCESS : TextToSpeech.ERROR;
         }
+        if (isLocalVoiceName(name))
+            return TextToSpeech.SUCCESS;
         if (BuildConfig.DEBUG)
             Log.v(TAG, "Voice not found");
         return TextToSpeech.ERROR;
