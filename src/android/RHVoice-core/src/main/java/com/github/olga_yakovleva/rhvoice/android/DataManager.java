@@ -27,6 +27,7 @@ import com.github.olga_yakovleva.rhvoice.VoiceInfo;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -98,6 +99,24 @@ public final class DataManager {
         List<String> paths = new ArrayList<String>();
         for (LanguagePack language : getLanguages()) {
             paths.addAll(language.getPaths(context));
+        }
+        // Glosy zainstalowane przez uzytkownika z pliku. Silnik sam sprawdza w
+        // kazdej podanej sciezce obecnosc voice.info, wiec wystarczy dolozyc
+        // katalogi - nie trzeba nic rejestrowac w katalogu paczek.
+        //
+        // KOLEJNOSC: dokladamy na KONIEC, czyli po sciezkach jezykow. Czy silnik
+        // wiaze glos z jezykiem niezaleznie od kolejnosci, jest do rozstrzygniecia
+        // POMIAREM na urzadzeniu (Zadanie 19), nie zalozeniem - jesli pomiar pokaze
+        // zaleznosc od kolejnosci, lokalne glosy trzeba wstawiac PRZED jezykami.
+        //
+        // Blad rejestru NIE moze wywrocic inicjalizacji silnika: bez tego catch
+        // uszkodzony plik local-voices.properties zabralby uzytkownikowi TAKZE
+        // wszystkie normalnie pobrane glosy.
+        try {
+            paths.addAll(ContextLocalVoiceDirs.newStore(context).getEnabledPaths());
+        } catch (IOException e) {
+            if (BuildConfig.DEBUG)
+                Log.e(TAG, "Cannot read the local voice registry", e);
         }
         return paths;
     }
